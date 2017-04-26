@@ -1,0 +1,6 @@
+[package]
+name = "brainfck_rust"
+version = "0.1.0"
+authors = ["8uurg <arthur.guijt12@gmail.com>"]
+
+[dependencies]
