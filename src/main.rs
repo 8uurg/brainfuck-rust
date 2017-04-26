@@ -6,30 +6,50 @@ use std::io::Read;
 use std::io::Write;
 use std::iter::Iterator;
 use std::io;
+use std::ffi::OsString;
 
 
 fn main() {
-    println!("Parsing...");
-    // TODO: Organize this.
-    let name = match env::args_os().nth(1) {
+    println!("Parsing...");    
+    let name = get_file_argument();
+    let instructions : Vec<Instruction> = parse(&get_file_contents(&name));
+
+    println!("Running program with {} instructions.", instructions.len());
+    fck(&instructions);
+    println!("\nDone running!");
+}
+
+/// Get the first argument (which should be a file).
+///
+/// Avoids using a more complex argument parser, since this is good enough.
+fn get_file_argument() -> OsString {
+    match env::args_os().nth(1) {
         Some(x) => x,
-        None => panic!("No file argument given. Aborting."),
-    };
+        None => panic!("No file argument given."),
+    }
+}
+
+/// Get the contents of the file specified by the string.
+fn get_file_contents(name: &OsString) -> String{
     let fpath = Path::new(&name);
+    // println!("Path specified is {:?}", fpath);
     if !fpath.is_file() { panic!("Path did not specify a file.") }
-    println!("Path specified is {:?}", fpath);
     let file = match File::open(fpath) {
         Ok(f) => f,
         Err(why) => panic!("Could not open file: {}.", why),
     };
     let mut reader = BufReader::new(file);
-    let instructions : Vec<Instruction> = {
-        let mut instructionsymbols:String = String::new();
-        match reader.read_to_string(&mut instructionsymbols) {
-            Result::Ok(y) => y,
-            Result::Err(n) => panic!("Something went wrong during reading: {}.", n),   
-        };
-        instructionsymbols.chars().filter_map(|x| match x {
+    let mut instructionsymbols:String = String::new();
+    match reader.read_to_string(&mut instructionsymbols) {
+        Result::Ok(y) => y,
+        Result::Err(n) => panic!("Something went wrong during reading: {}.", n),   
+    };
+    instructionsymbols
+}
+
+/// Turn the symbols into a vector of instructions.
+fn parse(symbols: &String) -> Vec<Instruction> {
+    (*symbols).chars().filter_map(|x| match x {
             '+' => Some(Instruction::Add),
             '-' => Some(Instruction::Subtract),
             '>' => Some(Instruction::Next),
@@ -40,13 +60,7 @@ fn main() {
             ']' => Some(Instruction::EndLoop),
             _ => None,
         }).collect()
-    };
-
-    println!("Running program with {} instructions.", instructions.len());
-    fck(&instructions);
-    println!("\nDone running!");
 }
-
 
 /// The basic Brainfuck instruction set.
 #[derive(Debug)]
@@ -108,7 +122,6 @@ fn fck(instructions: &Vec<Instruction>) {
     let mut ipointer:usize = 0;
     let mut epointer:usize = 30000;
     let mut lo:u8 = 0;
-    let mut cnt:u16 = 0;
     let mut elements:[u8; 60000] = [0; 60000];
     let mut pipointer:Vec<usize> = Vec::new();
     
